@@ -1,0 +1,26 @@
+layout {
+    background-color "transparent"
+}
+
+layer-rule {
+    match namespace="^dotshell-wallpaper$"
+    place-within-backdrop true
+}
+
+window-rule {
+    match app-id="^org[.]quickshell$" title="^Dotshell Settings$"
+    open-floating true
+    geometry-corner-radius 18
+    clip-to-geometry true
+    draw-border-with-background false
+    focus-ring {
+        off
+    }
+    border {
+        off
+    }
+    shadow {
+        off
+    }
+}
+

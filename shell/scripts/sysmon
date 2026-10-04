@@ -1,0 +1,179 @@
+#!/usr/bin/env bash
+set -u
+
+interval="${1:-1}"
+want_procs=0
+
+cpu_temp=""
+gpu_temp=""
+for dir in /sys/class/hwmon/hwmon*; do
+  [ -r "$dir/name" ] && [ -r "$dir/temp1_input" ] || continue
+  read -r name < "$dir/name"
+  case "$name" in
+    k10temp | coretemp | zenpower | cpu_thermal) [ -z "$cpu_temp" ] && cpu_temp="$dir/temp1_input" ;;
+    amdgpu | radeon | nouveau) [ -z "$gpu_temp" ] && gpu_temp="$dir/temp1_input" ;;
+  esac
+done
+
+gpu_busy=""
+gpu_device=""
+for file in /sys/class/drm/card*/device/gpu_busy_percent; do
+  [ -r "$file" ] || continue
+  gpu_busy="$file"
+  gpu_device="${file%/gpu_busy_percent}"
+  break
+done
+
+read_number() {
+  local value=-1
+  [ -n "$1" ] && [ -r "$1" ] && read -r value < "$1"
+  printf -v "$2" '%s' "${value:--1}"
+}
+
+declare -A last_ticks
+last_total=0
+last_busy=0
+last_rx=-1
+last_tx=-1
+last_time=0
+last_proc_total=0
+tick=0
+disk_used=-1
+disk_size=-1
+procs="[]"
+
+while :; do
+  now=${EPOCHREALTIME/./}
+
+  read -r _ user nice system idle iowait irq softirq steal _ < /proc/stat
+  total=$((user + nice + system + idle + iowait + irq + softirq + steal))
+  busy=$((total - idle - iowait))
+  delta_total=$((total - last_total))
+  cpu=-1
+  [ "$last_total" -gt 0 ] && [ "$delta_total" -gt 0 ] && cpu=$(((busy - last_busy) * 1000 / delta_total))
+
+  freq_sum=0
+  freq_count=0
+  for file in /sys/devices/system/cpu/cpu[0-9]*/cpufreq/scaling_cur_freq; do
+    [ -r "$file" ] || continue
+    read -r value < "$file"
+    freq_sum=$((freq_sum + value))
+    freq_count=$((freq_count + 1))
+  done
+  freq=-1
+  [ "$freq_count" -gt 0 ] && freq=$((freq_sum / freq_count / 1000))
+
+  mem_total=-1 mem_available=-1 swap_total=-1 swap_free=-1
+  while read -r key value _; do
+    case "$key" in
+      MemTotal:) mem_total=$value ;;
+      MemAvailable:) mem_available=$value ;;
+      SwapTotal:) swap_total=$value ;;
+      SwapFree:) swap_free=$value ;;
+    esac
+  done < /proc/meminfo
+
+  rx_sum=0
+  tx_sum=0
+  while read -r line; do
+    case "$line" in *:*) ;; *) continue ;; esac
+    interface="${line%%:*}"
+    case "$interface" in lo | veth* | docker* | br-* | virbr*) continue ;; esac
+    set -- ${line#*:}
+    rx_sum=$((rx_sum + $1))
+    tx_sum=$((tx_sum + $9))
+  done < /proc/net/dev
+  rx=-1
+  tx=-1
+  elapsed=$((now - last_time))
+  if [ "$last_rx" -ge 0 ] && [ "$elapsed" -gt 0 ]; then
+    rx=$(((rx_sum - last_rx) * 1000000 / elapsed))
+    tx=$(((tx_sum - last_tx) * 1000000 / elapsed))
+  fi
+
+  read_number "$cpu_temp" temp_cpu
+  read_number "$gpu_temp" temp_gpu
+  read_number "$gpu_busy" gpu
+  vram_used=-1
+  vram_total=-1
+  if [ -n "$gpu_device" ]; then
+    read_number "$gpu_device/mem_info_vram_used" vram_used
+    read_number "$gpu_device/mem_info_vram_total" vram_total
+  fi
+
+  if [ $((tick % 10)) -eq 0 ]; then
+    { read -r _; read -r disk_used disk_size; } < <(df -B1 --output=used,size / 2> /dev/null)
+  fi
+
+  if [ "$want_procs" = 1 ]; then
+    proc_window=$((total - last_proc_total))
+    declare -A ticks=()
+    top_pid=() top_name=() top_cpu=() top_rss=()
+    for file in /proc/[0-9]*/stat; do
+      read -r line < "$file" 2> /dev/null || continue
+      pid="${line%% *}"
+      name="${line#*(}"
+      name="${name%)*}"
+      set -- ${line##*) }
+      rss=$((${22} * 4))
+      [ "$rss" -gt 0 ] || continue
+      used=$((${12} + ${13}))
+      ticks[$pid]=$used
+      previous="${last_ticks[$pid]-}"
+      [ -n "$previous" ] && [ "$last_proc_total" -gt 0 ] && [ "$proc_window" -gt 0 ] || continue
+      share=$(((used - previous) * 1000 / proc_window))
+      slot=${#top_pid[@]}
+      while [ "$slot" -gt 0 ] && [ "${top_cpu[slot - 1]}" -lt "$share" ]; do
+        top_pid[slot]="${top_pid[slot - 1]}"
+        top_name[slot]="${top_name[slot - 1]}"
+        top_cpu[slot]="${top_cpu[slot - 1]}"
+        top_rss[slot]="${top_rss[slot - 1]}"
+        slot=$((slot - 1))
+      done
+      if [ "$slot" -lt 5 ]; then
+        top_pid[slot]=$pid
+        top_name[slot]="$name"
+        top_cpu[slot]=$share
+        top_rss[slot]=$rss
+      fi
+      top_pid=("${top_pid[@]:0:5}") top_name=("${top_name[@]:0:5}") top_cpu=("${top_cpu[@]:0:5}") top_rss=("${top_rss[@]:0:5}")
+    done
+    last_ticks=()
+    for pid in "${!ticks[@]}"; do
+      last_ticks[$pid]=${ticks[$pid]}
+    done
+    unset ticks
+    last_proc_total=$total
+    procs="["
+    for index in "${!top_pid[@]}"; do
+      name="${top_name[index]//\\/\\\\}"
+      name="${name//\"/\\\"}"
+      [ "$index" -gt 0 ] && procs+=","
+      procs+="[${top_pid[index]},\"$name\",${top_cpu[index]},${top_rss[index]}]"
+    done
+    procs+="]"
+  fi
+
+  printf '{"cpu":%s,"freq":%s,"cpuTemp":%s,"memTotal":%s,"memAvailable":%s,"swapTotal":%s,"swapFree":%s,"gpu":%s,"gpuTemp":%s,"vramUsed":%s,"vramTotal":%s,"rx":%s,"tx":%s,"diskUsed":%s,"diskSize":%s,"procs":%s}\n' \
+    "$cpu" "$freq" "$temp_cpu" "$mem_total" "$mem_available" "$swap_total" "$swap_free" "$gpu" "$temp_gpu" "$vram_used" "$vram_total" "$rx" "$tx" "${disk_used:--1}" "${disk_size:--1}" "$procs"
+
+  last_total=$total
+  last_busy=$busy
+  last_rx=$rx_sum
+  last_tx=$tx_sum
+  last_time=$now
+  tick=$((tick + 1))
+  if read -rt "$interval" command; then
+    case "$command" in
+      procs\ 1) want_procs=1 ;;
+      procs\ 0)
+        want_procs=0
+        last_ticks=()
+        last_proc_total=0
+        procs="[]"
+        ;;
+    esac
+  elif [ $? -le 128 ]; then
+    exit 0
+  fi
+done

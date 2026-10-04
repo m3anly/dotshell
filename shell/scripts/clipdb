@@ -1,0 +1,223 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+root="${DOTSHELL_CLIPBOARD_DIR:-${XDG_STATE_HOME:-$HOME/.local/state}/dotshell/clipboard}"
+db="$root/history.db"
+images="$root/images"
+max_entries="${DOTSHELL_CLIPBOARD_MAX:-1000}"
+max_text_bytes=$((${DOTSHELL_CLIPBOARD_MAX_TEXT_MIB:-5} * 1024 * 1024))
+max_image_bytes=$((${DOTSHELL_CLIPBOARD_MAX_IMAGE_MIB:-50} * 1024 * 1024))
+
+usage() {
+  cat >&2 <<EOF
+usage: clipdb store                  read the clipboard offered by wl-paste --watch
+       clipdb add MIME TIME [SOURCE] add stdin as an entry made at TIME (unix milliseconds)
+       clipdb list [LIMIT]           newest entries as JSON, pinned first
+       clipdb text ID                print the full text of an entry
+       clipdb copy ID                put an entry back on the clipboard
+       clipdb pin ID 0|1
+       clipdb source ID SOURCE
+       clipdb delete ID
+       clipdb clear                  delete every unpinned entry
+EOF
+  exit 2
+}
+
+sql() {
+  sqlite3 -cmd ".timeout 3000" "$db" "$@"
+}
+
+quote() {
+  local value=${1//\'/\'\'}
+  printf "'%s'" "$value"
+}
+
+number() {
+  [[ $1 =~ ^[0-9]+$ ]] || { echo "clipdb: not a number: $1" >&2; exit 2; }
+  printf '%s' "$1"
+}
+
+init() {
+  mkdir -p "$images"
+  [ -s "$db" ] && return
+  sql >/dev/null <<'SQL'
+PRAGMA journal_mode = WAL;
+CREATE TABLE IF NOT EXISTS entries (
+  id INTEGER PRIMARY KEY,
+  hash TEXT NOT NULL UNIQUE,
+  mime TEXT NOT NULL,
+  text TEXT,
+  file TEXT,
+  size INTEGER NOT NULL,
+  width INTEGER NOT NULL DEFAULT 0,
+  height INTEGER NOT NULL DEFAULT 0,
+  source TEXT NOT NULL DEFAULT '',
+  time INTEGER NOT NULL DEFAULT 0,
+  pinned INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS entries_recent ON entries (pinned DESC, time DESC, id DESC);
+SQL
+}
+
+extension() {
+  case "$1" in
+    image/png) echo png ;;
+    image/jpeg | image/jpg) echo jpg ;;
+    image/webp) echo webp ;;
+    image/gif) echo gif ;;
+    image/bmp) echo bmp ;;
+    image/svg+xml) echo svg ;;
+    image/tiff) echo tiff ;;
+    *) echo bin ;;
+  esac
+}
+
+png_size() {
+  local bytes
+  bytes=$(od -An -tu1 -j16 -N8 "$1" | tr -s ' ' ' ')
+  read -r w1 w2 w3 w4 h1 h2 h3 h4 <<<"$bytes"
+  printf '%d %d' $(((w1 << 24) | (w2 << 16) | (w3 << 8) | w4)) $(((h1 << 24) | (h2 << 16) | (h3 << 8) | h4))
+}
+
+prune() {
+  local keep="SELECT id FROM entries WHERE pinned = 0 ORDER BY time DESC, id DESC LIMIT $max_entries"
+  local file
+  while IFS= read -r file; do
+    [ -n "$file" ] && rm -f -- "$images/$file"
+  done < <(sql "SELECT COALESCE(file, '') FROM entries WHERE pinned = 0 AND id NOT IN ($keep);")
+  sql "DELETE FROM entries WHERE pinned = 0 AND id NOT IN ($keep);"
+}
+
+add() {
+  init
+  local tmp status=0
+  tmp=$(mktemp "$root/.incoming.XXXXXX")
+  cat >"$tmp"
+  insert "$tmp" "$@" || status=$?
+  rm -f -- "$tmp"
+  return "$status"
+}
+
+insert() {
+  local tmp=$1 mime=$2 time=$3 source=${4:-}
+  local size
+  size=$(stat -c %s "$tmp")
+  [ "$size" -gt 0 ] || return 0
+  local hash
+  hash=$(sha256sum "$tmp" | cut -d' ' -f1)
+  local existing
+  existing=$(sql "SELECT id FROM entries WHERE hash = '$hash';")
+  if [ -n "$existing" ]; then
+    sql "UPDATE entries SET time = MAX(time, $time) WHERE id = $existing;"
+    echo "stored $existing touched"
+    return
+  fi
+  local id
+  if [[ $mime == image/* ]]; then
+    [ "$size" -le "$max_image_bytes" ] || return 0
+    local file width=0 height=0
+    file="$hash.$(extension "$mime")"
+    mv -f -- "$tmp" "$images/$file"
+    if [ "$mime" = image/png ]; then
+      read -r width height <<<"$(png_size "$images/$file")"
+    fi
+    id=$(sql "INSERT INTO entries (hash, mime, file, size, width, height, source, time) VALUES ('$hash', $(quote "$mime"), '$file', $size, $width, $height, $(quote "$source"), $time) RETURNING id;")
+  else
+    [ "$size" -le "$max_text_bytes" ] || return 0
+    if ! grep -q '[^[:space:]]' "$tmp"; then
+      return 0
+    fi
+    id=$(sql "INSERT INTO entries (hash, mime, text, size, source, time) VALUES ('$hash', $(quote "$mime"), CAST(readfile($(quote "$tmp")) AS TEXT), $size, $(quote "$source"), $time) RETURNING id;")
+  fi
+  prune
+  echo "stored $id new"
+}
+
+pick_type() {
+  local types=$1 type
+  if grep -qx 'x-kde-passwordManagerHint' <<<"$types"; then
+    return 1
+  fi
+  for type in image/png image/jpeg image/webp image/gif image/bmp; do
+    grep -qx "$type" <<<"$types" && { echo "$type"; return; }
+  done
+  type=$(grep -m1 '^image/' <<<"$types" || true)
+  [ -n "$type" ] && { echo "$type"; return; }
+  for type in text/uri-list 'text/plain;charset=utf-8' text/plain UTF8_STRING STRING TEXT; do
+    grep -qx "$type" <<<"$types" && { echo "$type"; return; }
+  done
+  return 1
+}
+
+store() {
+  cat >/dev/null
+  case "${CLIPBOARD_STATE:-data}" in
+    sensitive | nil | clear) return 0 ;;
+  esac
+  local types mime
+  types=$(wl-paste --list-types 2>/dev/null) || return 0
+  mime=$(pick_type "$types") || return 0
+  local stored=text/plain
+  [[ $mime == image/* || $mime == text/uri-list ]] && stored=$mime
+  wl-paste --no-newline --type "$mime" 2>/dev/null | add "$stored" "$(date +%s%3N)"
+}
+
+list() {
+  local limit
+  limit=$(number "${1:-5000}")
+  init
+  sql -json "SELECT id, mime, substr(COALESCE(text, ''), 1, 1000) AS preview, COALESCE(file, '') AS file, size, width, height, source, time, pinned FROM entries ORDER BY pinned DESC, time DESC, id DESC LIMIT $limit;"
+}
+
+text() {
+  local id
+  id=$(number "$1")
+  sql -newline '' "SELECT text FROM entries WHERE id = $id;"
+}
+
+copy() {
+  local id row mime file
+  id=$(number "$1")
+  row=$(sql -separator $'\t' "SELECT mime, COALESCE(file, '') FROM entries WHERE id = $id;")
+  [ -n "$row" ] || exit 1
+  IFS=$'\t' read -r mime file <<<"$row"
+  if [ -n "$file" ]; then
+    wl-copy --type "$mime" <"$images/$file"
+  elif [ "$mime" = text/plain ]; then
+    text "$id" | wl-copy
+  else
+    text "$id" | wl-copy --type "$mime"
+  fi
+}
+
+remove() {
+  local id file
+  id=$(number "$1")
+  file=$(sql "SELECT COALESCE(file, '') FROM entries WHERE id = $id;")
+  sql "DELETE FROM entries WHERE id = $id;"
+  [ -z "$file" ] || rm -f -- "$images/$file"
+}
+
+clear_history() {
+  local file
+  while IFS= read -r file; do
+    [ -n "$file" ] && rm -f -- "$images/$file"
+  done < <(sql "SELECT COALESCE(file, '') FROM entries WHERE pinned = 0;")
+  sql "DELETE FROM entries WHERE pinned = 0;"
+}
+
+[ $# -ge 1 ] || usage
+command=$1
+shift
+case "$command" in
+  store) store ;;
+  add) [ $# -ge 2 ] || usage; add "$1" "$(number "$2")" "${3:-}" ;;
+  list) list "$@" ;;
+  text) [ $# -eq 1 ] || usage; text "$1" ;;
+  copy) [ $# -eq 1 ] || usage; copy "$1" ;;
+  pin) [ $# -eq 2 ] || usage; init; sql "UPDATE entries SET pinned = $([ "$2" = 1 ] && echo 1 || echo 0) WHERE id = $(number "$1");" ;;
+  source) [ $# -eq 2 ] || usage; init; sql "UPDATE entries SET source = $(quote "$2") WHERE id = $(number "$1");" ;;
+  delete) [ $# -eq 1 ] || usage; init; remove "$1" ;;
+  clear) init; clear_history ;;
+  *) usage ;;
+esac
