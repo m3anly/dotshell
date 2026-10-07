@@ -13,6 +13,7 @@ ListView {
     property bool populating: false
     property int shownRows: 0
     property var pointer: null
+    readonly property real pointerSlop: 4
     property bool followTop: true
     property int lastIndex: 0
     property string selectedKey: ""
@@ -90,10 +91,13 @@ ListView {
     }
 
     function hover(key: string, scenePoint: point): void {
-        const moved = pointer !== null && (pointer.x !== scenePoint.x || pointer.y !== scenePoint.y);
-        pointer = scenePoint;
-        if (!moved)
+        if (pointer === null) {
+            pointer = scenePoint;
             return;
+        }
+        if (Math.hypot(scenePoint.x - pointer.x, scenePoint.y - pointer.y) < pointerSlop)
+            return;
+        pointer = scenePoint;
         const index = selectables.findIndex(item => item.key === key);
         if (index < 0 || index === selectedIndex)
             return;
