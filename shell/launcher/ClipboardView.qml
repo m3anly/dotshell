@@ -57,7 +57,7 @@ ViewSlide {
         }
         list.afterPulse(() => {
             Ui.closeAll();
-            Clipboard.paste(item.entry);
+            Clipboard.copy(item.entry);
         });
     }
 

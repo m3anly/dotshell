@@ -108,11 +108,6 @@ Singleton {
         Quickshell.execDetached(["bash", root.script, "copy", entry.id]);
     }
 
-    function paste(entry: var): void {
-        pendingSource = entry.source;
-        Quickshell.execDetached(["bash", "-c", "bash \"$0\" copy \"$1\" && sleep 0.15 && wtype -M ctrl v -m ctrl", root.script, entry.id]);
-    }
-
     function copyText(text: string, source: string): void {
         pendingSource = source;
         Quickshell.execDetached(["wl-copy", "--", text]);

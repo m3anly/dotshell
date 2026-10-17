@@ -16,7 +16,7 @@ ViewSlide {
         case "calc":
             return "Copy result";
         case "clip":
-            return "Paste";
+            return "Copy";
         default:
             return "Open";
         }
@@ -142,7 +142,7 @@ ViewSlide {
             }
             list.afterPulse(() => {
                 Ui.closeAll();
-                Clipboard.paste(item.entry);
+                Clipboard.copy(item.entry);
             });
             break;
         }

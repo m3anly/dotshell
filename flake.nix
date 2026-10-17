@@ -42,7 +42,6 @@
             pkgs.sqlite
             pkgs.pipewire
             pkgs.wl-clipboard
-            pkgs.wtype
             pkgs.brightnessctl
             pkgs.cava
             pkgs.glib

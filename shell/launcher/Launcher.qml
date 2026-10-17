@@ -27,7 +27,7 @@ Rectangle {
         }
         if (!current)
             return [];
-        return [["↵", "Paste", "go", true], ["⇧↵", "Copy", "copy", false], ["Ctrl P", current.entry.pinned ? "Unpin" : "Pin", "pin", false], ["Ctrl ⌫", "Delete", "delete", false]];
+        return [["↵", "Copy", "go", true], ["Ctrl P", current.entry.pinned ? "Unpin" : "Pin", "pin", false], ["Ctrl ⌫", "Delete", "delete", false]];
     }
     readonly property var rightHints: searching ? [["Tab", "Clipboard", "tab", false], ["Esc", "Close", "close", false]] : [["Tab", "Search", "tab", false]]
 
