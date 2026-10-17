@@ -63,6 +63,13 @@ Singleton {
         action("focus-window", "--id", String(id));
     }
 
+    function clearUrgency(appId: string): void {
+        const target = appId.toLowerCase();
+        for (const id in windows)
+            if (windows[id].is_urgent && (windows[id].app_id ?? "").toLowerCase() === target)
+                action("unset-window-urgent", "--id", String(id));
+    }
+
     function nextLayout(): void {
         action("switch-layout", "next");
     }

@@ -80,5 +80,8 @@ ShellRoot {
 
     Ipc {}
 
-    Component.onCompleted: Clipboard.refresh()
+    Component.onCompleted: {
+        Clipboard.refresh();
+        Badges.watch();
+    }
 }
