@@ -72,6 +72,7 @@ Item {
             anchors.fill: parent
             asynchronous: true
             cache: false
+            mipmap: true
             fillMode: Image.PreserveAspectCrop
             sourceSize: root.sourceSize
             visible: root.front === index || (root.incoming === index && !root.masked)

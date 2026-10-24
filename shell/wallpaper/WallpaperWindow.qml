@@ -47,10 +47,11 @@ PanelWindow {
     ShaderEffectSource {
         id: small
 
-        anchors.fill: parent
+        width: Math.ceil(window.width / 4)
+        height: Math.ceil(window.height / 4)
         visible: false
         sourceItem: sharp
-        textureSize: Qt.size(Math.ceil(window.width / 4), Math.ceil(window.height / 4))
+        textureSize: Qt.size(width, height)
     }
 
     MultiEffect {

@@ -8,6 +8,7 @@ Item {
 
     property url source
     property size sourceSize
+    property bool mipmap: false
     property int front: 0
     readonly property bool ready: (images.itemAt(front) as Image)?.status === Image.Ready
 
@@ -31,6 +32,7 @@ Item {
             anchors.fill: parent
             asynchronous: true
             cache: false
+            mipmap: root.mipmap
             fillMode: Image.PreserveAspectCrop
             sourceSize: root.sourceSize
             opacity: root.front === index ? 1 : 0
