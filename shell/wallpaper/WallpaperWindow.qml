@@ -36,19 +36,21 @@ PanelWindow {
     }
 
     WallpaperImage {
+        id: sharp
+
         anchors.fill: parent
         source: Wallpaper.source
         transition: Config.wallpaperTransition
         sourceSize: Qt.size(window.width * (window.screen?.devicePixelRatio ?? 1), window.height * (window.screen?.devicePixelRatio ?? 1))
     }
 
-    CrossfadeImage {
+    ShaderEffectSource {
         id: small
 
         anchors.fill: parent
         visible: false
-        source: Wallpaper.source
-        sourceSize: Qt.size(window.width / 4, window.height / 4)
+        sourceItem: sharp
+        textureSize: Qt.size(Math.ceil(window.width / 4), Math.ceil(window.height / 4))
     }
 
     MultiEffect {
