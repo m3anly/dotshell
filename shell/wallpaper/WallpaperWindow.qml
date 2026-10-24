@@ -57,8 +57,8 @@ PanelWindow {
         autoPaddingEnabled: false
         blurEnabled: true
         blurMax: 32
-        blur: 0.3 + 0.7 * window.veil
-        opacity: Math.min(1, window.veil * 2)
+        blur: window.veil * window.veil
+        opacity: Math.min(1, window.veil * 4)
         visible: window.veil > 0
     }
 }
