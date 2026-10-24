@@ -23,6 +23,18 @@ PanelWindow {
     WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
     mask: Region {}
 
+    property real veil: Niri.overviewOpen && !GameMode.flatGlass ? 1 : 0
+
+    Behavior on veil {
+        enabled: !Motion.reduced
+
+        NumberAnimation {
+            duration: Motion.standardMs
+            easing.type: Easing.BezierSpline
+            easing.bezierCurve: Motion.effectsCurve
+        }
+    }
+
     WallpaperImage {
         anchors.fill: parent
         source: Wallpaper.source
@@ -45,18 +57,8 @@ PanelWindow {
         autoPaddingEnabled: false
         blurEnabled: true
         blurMax: 32
-        blur: 1
-        opacity: Niri.overviewOpen && !GameMode.flatGlass ? 1 : 0
-        visible: opacity > 0
-
-        Behavior on opacity {
-            enabled: !Motion.reduced
-
-            NumberAnimation {
-                duration: Motion.fastMs
-                easing.type: Easing.BezierSpline
-                easing.bezierCurve: Motion.effectsCurve
-            }
-        }
+        blur: 0.3 + 0.7 * window.veil
+        opacity: Math.min(1, window.veil * 2)
+        visible: window.veil > 0
     }
 }
