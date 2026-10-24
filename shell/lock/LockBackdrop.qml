@@ -8,6 +8,15 @@ Item {
     property var capture: null
     property bool unlocking: false
     readonly property bool hasBackdrop: capture !== null && capture.hasContent
+    property real release: unlocking ? 1 : 0
+
+    Behavior on release {
+        enabled: !Motion.reduced
+
+        Exit {
+            duration: 220
+        }
+    }
 
     onCaptureChanged: adopt()
     Component.onCompleted: adopt()
@@ -34,28 +43,12 @@ Item {
         autoPaddingEnabled: false
         blurEnabled: true
         blurMax: 40
-        blur: root.unlocking ? 0 : 1
-
-        Behavior on blur {
-            enabled: !Motion.reduced
-
-            Exit {
-                duration: 220
-            }
-        }
+        blur: 1 - root.release
     }
 
     Rectangle {
         anchors.fill: parent
         color: root.hasBackdrop ? Qt.rgba(8 / 255, 8 / 255, 9 / 255, 1) : Theme.glassBase
-        opacity: root.hasBackdrop && root.unlocking ? 0 : root.hasBackdrop ? 0.55 : 1
-
-        Behavior on opacity {
-            enabled: !Motion.reduced
-
-            Exit {
-                duration: 220
-            }
-        }
+        opacity: root.hasBackdrop ? 0.55 * (1 - root.release) : 1
     }
 }
