@@ -47,6 +47,7 @@ For screenshots and input without touching the live session, run a headless sway
 
 - Use a short `XDG_RUNTIME_DIR` (the socket path must stay under 108 bytes), a private `dbus-run-session`, and separate `XDG_STATE_HOME`, `XDG_CONFIG_HOME`, `XDG_CACHE_HOME`, plus a copy of `shell/` as `DOTSHELL_DIR` so IPC reaches the bench instance only.
 - Start sway with `WLR_BACKENDS=headless WLR_RENDERER=gles2 WLR_LIBINPUT_NO_DEVICES=1`, drive the shell with `<runner> ipc call …`, type with `wtype`, capture with `grim -g`.
+- Unset `NIRI_SOCKET` for the bench, or its `Niri` service follows and acts on the live session's windows. `brightness` calls there change the real backlight.
 - `wtype` drops the first key event of every call: lead with `-k Shift_L -s 120`.
 - Pointer clicks and wheel events do not reach layer surfaces there; test those live, or force the state in the bench copy.
 - sway has no background blur, so glass renders unblurred.
