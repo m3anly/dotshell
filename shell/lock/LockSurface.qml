@@ -1,7 +1,6 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
-import QtQuick.Effects
 import Quickshell.Wayland
 import qs.components
 import qs.services
@@ -11,72 +10,24 @@ WlSessionLockSurface {
     id: surface
 
     property var controller: null
-    property var capture: null
+    readonly property var capture: controller?.captureFor(screen) ?? null
     property bool entered: false
     readonly property bool unlocking: controller?.unlocking ?? false
-    readonly property bool hasBackdrop: capture !== null && capture.hasContent
     readonly property int typed: controller?.password.length ?? 0
     readonly property int failures: controller?.failures ?? 0
     readonly property real em: 240
 
     color: "black"
 
-    onCaptureChanged: adopt()
-    onFailuresChanged: {
-        if (failures > 0 && !Motion.reduced)
-            shake.restart();
-    }
     Component.onCompleted: {
-        adopt();
         keys.forceActiveFocus();
         entered = true;
     }
 
-    function adopt(): void {
-        if (!capture)
-            return;
-        capture.parent = holder;
-        capture.anchors.fill = holder;
-        capture.visible = true;
-    }
-
-    Item {
-        id: holder
-
+    LockBackdrop {
         anchors.fill: parent
-        visible: false
-    }
-
-    MultiEffect {
-        anchors.fill: parent
-        visible: surface.hasBackdrop
-        source: holder
-        autoPaddingEnabled: false
-        blurEnabled: true
-        blurMax: 40
-        blur: surface.unlocking ? 0 : 1
-
-        Behavior on blur {
-            enabled: !Motion.reduced
-
-            Exit {
-                duration: 220
-            }
-        }
-    }
-
-    Rectangle {
-        anchors.fill: parent
-        color: surface.hasBackdrop ? Qt.rgba(8 / 255, 8 / 255, 9 / 255, 1) : Theme.glassBase
-        opacity: surface.hasBackdrop && surface.unlocking ? 0 : surface.hasBackdrop ? 0.55 : 1
-
-        Behavior on opacity {
-            enabled: !Motion.reduced
-
-            Exit {
-                duration: 220
-            }
-        }
+        capture: surface.capture
+        unlocking: surface.unlocking
     }
 
     Item {
@@ -84,24 +35,7 @@ WlSessionLockSurface {
 
         anchors.fill: parent
         focus: true
-        Keys.onPressed: event => {
-            const control = surface.controller;
-            if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter)
-                control.submit();
-            else if (event.key === Qt.Key_Backspace && (event.modifiers & Qt.ControlModifier))
-                control.clear();
-            else if (event.key === Qt.Key_Backspace)
-                control.erase();
-            else if (event.key === Qt.Key_Escape)
-                control.clear();
-            else if (event.text.length > 0 && event.text.charCodeAt(0) >= 32)
-                control.type(event.text);
-            else {
-                event.accepted = false;
-                return;
-            }
-            event.accepted = true;
-        }
+        Keys.onPressed: event => event.accepted = surface.controller.key(event)
     }
 
     Item {
@@ -122,10 +56,11 @@ WlSessionLockSurface {
             anchors.centerIn: parent
             spacing: 26
 
-            Row {
+            LockClock {
                 id: clock
 
                 anchors.horizontalCenter: parent.horizontalCenter
+                em: surface.em
                 scale: surface.entered ? 1 : 0.92
                 transform: Translate {
                     y: surface.entered ? 0 : 40
@@ -144,45 +79,6 @@ WlSessionLockSurface {
                         epsilon: 0.002
                     }
                 }
-
-                DisplayText {
-                    id: hours
-
-                    text: Time.hhmm.slice(0, 2)
-                    font.pixelSize: surface.em
-                    font.weight: 600
-                }
-
-                Item {
-                    readonly property real digitCenter: 0.35
-
-                    width: surface.em * (0.105 + 0.11 + 0.165)
-                    height: hours.height
-
-                    Column {
-                        x: surface.em * 0.105
-                        y: hours.baselineOffset - surface.em * parent.digitCenter - height / 2 + surface.em * 0.005
-                        spacing: surface.em * 0.19
-
-                        Repeater {
-                            model: 2
-
-                            Rectangle {
-                                width: surface.em * 0.11
-                                height: width
-                                radius: width / 2
-                                color: Theme.red
-                                antialiasing: true
-                            }
-                        }
-                    }
-                }
-
-                DisplayText {
-                    text: Time.hhmm.slice(2, 4)
-                    font.pixelSize: surface.em
-                    font.weight: 600
-                }
             }
 
             Label {
@@ -192,82 +88,11 @@ WlSessionLockSurface {
                 tracking: 0.2
             }
 
-            Item {
-                id: dots
-
-                readonly property int pitch: 22
-                readonly property int size: 10
-                readonly property bool template: surface.typed === 0
-                readonly property int capacity: Math.max(6, Math.floor((surface.width - 96) / pitch))
-                readonly property int count: template ? 6 : Math.min(surface.typed, capacity)
-
+            PasswordDots {
                 anchors.horizontalCenter: parent.horizontalCenter
-                width: count * pitch - (pitch - size)
-                height: size
-                transform: Translate {
-                    id: shakeOffset
-                }
-
-                Behavior on width {
-                    enabled: !Motion.reduced
-
-                    SpatialStandard {}
-                }
-
-                Repeater {
-                    model: Math.max(6, dots.count)
-
-                    Rectangle {
-                        required property int index
-                        property bool born: false
-                        readonly property bool present: born && index < dots.count
-                        readonly property bool filled: present && !dots.template
-
-                        x: index * dots.pitch
-                        width: dots.size
-                        height: dots.size
-                        radius: dots.size / 2
-                        color: filled ? Theme.fg : "transparent"
-                        border.width: 1
-                        border.color: surface.failures > 0 && dots.template ? Theme.red : Theme.fg2
-                        opacity: present ? 1 : 0
-                        scale: !present ? 0.3 : filled ? 1.15 : 1
-                        antialiasing: true
-                        Component.onCompleted: born = true
-
-                        Behavior on color {
-                            EffectsColor {}
-                        }
-                        Behavior on border.color {
-                            EffectsColor {}
-                        }
-                        Behavior on opacity {
-                            Effects {}
-                        }
-                        Behavior on scale {
-                            enabled: !Motion.reduced
-
-                            SpatialFast {
-                                epsilon: 0.002
-                            }
-                        }
-                    }
-                }
-
-                SequentialAnimation {
-                    id: shake
-
-                    PropertyAction {
-                        target: shakeOffset
-                        property: "x"
-                        value: 18
-                    }
-                    SpatialFast {
-                        target: shakeOffset
-                        property: "x"
-                        to: 0
-                    }
-                }
+                typed: surface.typed
+                failures: surface.failures
+                maxWidth: surface.width - 96
             }
 
             Label {

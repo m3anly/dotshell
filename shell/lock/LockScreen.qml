@@ -23,6 +23,10 @@ Scope {
         return list;
     }
 
+    function captureFor(screen: var): var {
+        return captureList().find(capture => capture.modelData.name === screen?.name) ?? null;
+    }
+
     function begin(): void {
         if (lock.locked || capturing)
             return;
@@ -62,6 +66,22 @@ Scope {
     function clear(): void {
         if (!busy && !unlocking)
             password = "";
+    }
+
+    function key(event: var): bool {
+        if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter)
+            submit();
+        else if (event.key === Qt.Key_Backspace && (event.modifiers & Qt.ControlModifier))
+            clear();
+        else if (event.key === Qt.Key_Backspace)
+            erase();
+        else if (event.key === Qt.Key_Escape)
+            clear();
+        else if (event.text.length > 0 && event.text.charCodeAt(0) >= 32)
+            type(event.text);
+        else
+            return false;
+        return true;
     }
 
     function submit(): void {
@@ -150,10 +170,7 @@ Scope {
         }
 
         LockSurface {
-            id: surface
-
             controller: root
-            capture: root.captureList().find(capture => capture.modelData.name === surface.screen?.name) ?? null
         }
     }
 }
