@@ -33,9 +33,10 @@ Item {
     property real rowResizedAt: 0
     property var passwordNetwork: null
 
-    implicitHeight: Math.round((card.height + 12) * openness)
+    readonly property real cardHeight: column.implicitHeight + 20
+
+    implicitHeight: Math.round((cardHeight + 12) * openness)
     visible: openness > 0
-    clip: true
 
     onKindChanged: {
         if (kind !== "")
@@ -169,9 +170,10 @@ Item {
     Rectangle {
         id: card
 
-        y: 12
+        y: Math.round(12 * root.openness)
         width: parent.width
-        height: column.implicitHeight + 20
+        height: root.implicitHeight - y
+        clip: true
         radius: 16
         topLeftRadius: 6
         topRightRadius: 6
@@ -183,7 +185,9 @@ Item {
         ColumnLayout {
             id: column
 
-            anchors.fill: parent
+            anchors.top: parent.top
+            anchors.left: parent.left
+            anchors.right: parent.right
             anchors.margins: 10
             spacing: 6
 
