@@ -10,7 +10,7 @@ Panel {
     property string sub: ""
     property string audioPicker: ""
     property bool compact: false
-    property real expansion: 1
+    property real expansion: compact ? 0 : 1
 
     fromRight: true
     onOpenChanged: {
