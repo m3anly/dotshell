@@ -7,7 +7,7 @@ Dotshell is a Quickshell (QML) desktop shell for niri, packaged as a Nix flake w
 | Path | Contents |
 | --- | --- |
 | `shell/shell.qml` | Root: the per-screen windows and the `IpcHandler`s |
-| `shell/config/` | `Config`: `config.json` (Home Manager) over `settings.json` (settings window) over built-in defaults, per key |
+| `shell/config/` | `Config`: `config.json` (Home Manager) over `settings.json` (settings window) over built-in defaults, per key; the storage itself is `SettingsFile`, which fliq reuses for its own settings |
 | `shell/theme/` | `Theme` (colors, type, sizes), `Motion` (springs, curves) and the animation types `SpatialFast`, `SpatialStandard`, `SpatialSlow`, `Effects`, `EffectsColor`, `Exit` |
 | `shell/components/` | Shared controls and visuals: dot glyphs, `Panel`, `Reveal`, `MorphButton`, form controls, `Tooltip` and so on |
 | `shell/services/` | Singletons: niri IPC, audio, power, clipboard, notifications, weather, persistence (`Store`) and so on |
