@@ -89,18 +89,19 @@ Singleton {
 
     function suppressed(nextKind: string, target: string): bool {
         const panelHere = Ui.panel !== "" && Ui.screen === target;
+        const quickSettingsOpen = Ui.panel === "quickSettings" || Ui.panel === "shade";
         const mediaHere = panelHere && Ui.panel === "dashboard" && Ui.dashboardTab === "media";
         switch (nextKind) {
         case "volume":
-            return panelHere && (Ui.panel === "quickSettings" || mediaHere);
+            return panelHere && (quickSettingsOpen || mediaHere);
         case "media":
             return mediaHere;
         case "mic":
         case "brightness":
-            return panelHere && Ui.panel === "quickSettings";
+            return panelHere && quickSettingsOpen;
         case "wifi":
         case "bluetooth":
-            return !Config.osd.radios || Ui.panel === "quickSettings";
+            return !Config.osd.radios || quickSettingsOpen;
         case "profile":
             return !Config.osd.powerMode || Ui.panel === "battery";
         case "capslock":

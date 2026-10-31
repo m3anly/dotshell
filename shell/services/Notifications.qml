@@ -120,7 +120,7 @@ Singleton {
             const received = Object.assign({}, root.received);
             received[notification.id] = Date.now();
             root.received = received;
-            const centerOpen = Ui.panel === "notifications";
+            const centerOpen = Ui.panel === "notifications" || Ui.panel === "shade";
             if (!centerOpen)
                 root.unreadIds = [...root.unreadIds.filter(id => id !== notification.id), notification.id];
             if (centerOpen || (root.doNotDisturb && notification.urgency !== NotificationUrgency.Critical))

@@ -2,6 +2,8 @@
 
 Dotshell is a Quickshell (QML) desktop shell for niri, packaged as a Nix flake with a Home Manager module and a NixOS module. Document only what is not obvious from the code.
 
+The phone layout lives in [fliq](https://github.com/m3anly/fliq), a compositor that runs Dotshell's `shell/` merged with its own and overrides files by path. Renaming or changing the public API of a service, component or settings section can break it.
+
 ## Layout
 
 | Path | Contents |

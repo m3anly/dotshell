@@ -2,12 +2,15 @@ import QtQuick
 import QtQuick.Layouts
 import qs.components
 import qs.services
+import qs.theme
 
 Panel {
     id: root
 
     property string sub: ""
     property string audioPicker: ""
+    property bool compact: false
+    property real expansion: 1
 
     fromRight: true
     onOpenChanged: {
@@ -24,6 +27,39 @@ Panel {
             Radios.stopScanning();
     }
 
+    Item {
+        visible: false
+
+        states: State {
+            name: "compact"
+            when: root.compact
+
+            PropertyChanges {
+                root.expansion: 0
+            }
+        }
+
+        transitions: [
+            Transition {
+                from: "compact"
+                enabled: !Motion.reduced
+
+                Expand {
+                    property: "expansion"
+                }
+            },
+            Transition {
+                to: "compact"
+                enabled: !Motion.reduced
+
+                Exit {
+                    property: "expansion"
+                    duration: 220
+                }
+            }
+        ]
+    }
+
     function toggleSub(kind: string): void {
         sub = sub === kind ? "" : kind;
     }
@@ -36,9 +72,12 @@ Panel {
     }
 
     Header {
-        shown: root.open
+        shown: root.open && !root.compact
         order: 0
+        visible: root.expansion > 0
         Layout.fillWidth: true
+        Layout.preferredHeight: implicitHeight * root.expansion
+        Layout.bottomMargin: -12 * (1 - root.expansion)
     }
 
     Reveal {
@@ -104,16 +143,21 @@ Panel {
     }
 
     BrightnessRow {
-        shown: root.open
+        shown: root.open && !root.compact
         order: 2
-        visible: Brightness.available
+        visible: Brightness.available && root.expansion > 0
         Layout.fillWidth: true
+        Layout.preferredHeight: implicitHeight * root.expansion
+        Layout.topMargin: -12 * (1 - root.expansion)
     }
 
     AudioRow {
-        shown: root.open
+        shown: root.open && !root.compact
         order: 3
+        visible: root.expansion > 0
         Layout.fillWidth: true
+        Layout.preferredHeight: implicitHeight * root.expansion
+        Layout.topMargin: -12 * (1 - root.expansion)
         node: Audio.sink
         glyph: "vol"
         heading: "Out"
@@ -122,9 +166,12 @@ Panel {
     }
 
     AudioRow {
-        shown: root.open
+        shown: root.open && !root.compact
         order: 4
+        visible: root.expansion > 0
         Layout.fillWidth: true
+        Layout.preferredHeight: implicitHeight * root.expansion
+        Layout.topMargin: -12 * (1 - root.expansion)
         node: Audio.source
         glyph: "mic"
         heading: "In"
@@ -134,8 +181,11 @@ Panel {
     }
 
     Footer {
-        shown: root.open
+        shown: root.open && !root.compact
         order: 5
+        visible: root.expansion > 0
         Layout.fillWidth: true
+        Layout.preferredHeight: implicitHeight * root.expansion
+        Layout.topMargin: -12 * (1 - root.expansion)
     }
 }

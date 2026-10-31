@@ -21,6 +21,8 @@ Item {
 
     HoverHandler {
         id: hover
+
+        cursorShape: Qt.PointingHandCursor
     }
 
     Rectangle {
@@ -33,12 +35,10 @@ Item {
         }
     }
 
-    MouseArea {
-        anchors.fill: parent
+    TapHandler {
         acceptedButtons: Qt.LeftButton | Qt.MiddleButton
-        cursorShape: Qt.PointingHandCursor
-        onClicked: event => {
-            if (event.button === Qt.MiddleButton)
+        onTapped: (eventPoint, button) => {
+            if (button === Qt.MiddleButton)
                 Notifications.dismiss(root.notification);
             else
                 Notifications.activate(root.notification);

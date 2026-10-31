@@ -12,6 +12,7 @@ Panel {
     id: root
 
     readonly property int count: Notifications.list.length
+    property real maxListHeight: 720
 
     fromRight: true
     onOpenChanged: {
@@ -112,10 +113,10 @@ Panel {
         shown: root.open
         order: 1
         Layout.fillWidth: true
-        implicitHeight: root.count > 0 ? Math.min(list.contentHeight, 720) : empty.implicitHeight
+        implicitHeight: root.count > 0 ? Math.min(list.contentHeight, root.maxListHeight) : empty.implicitHeight
 
         Behavior on implicitHeight {
-            enabled: !Motion.reduced && root.open
+            enabled: !Motion.reduced && root.open && list.contentHeight <= root.maxListHeight
 
             SpatialStandard {}
         }
