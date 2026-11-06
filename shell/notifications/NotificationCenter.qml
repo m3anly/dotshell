@@ -116,7 +116,9 @@ Panel {
         implicitHeight: root.count > 0 ? Math.min(list.contentHeight, root.maxListHeight) : empty.implicitHeight
 
         Behavior on implicitHeight {
-            enabled: !Motion.reduced && root.open && list.contentHeight <= root.maxListHeight
+            id: heightFollow
+
+            enabled: !Motion.reduced && root.open && heightFollow.targetValue < root.maxListHeight
 
             SpatialStandard {}
         }
