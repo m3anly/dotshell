@@ -104,6 +104,11 @@ Singleton {
         if (windowId !== undefined)
             Niri.focusWindow(windowId);
         else
-            entry.execute();
+            launch(entry);
+    }
+
+    function launch(entry: var): void {
+        const directory = entry.workingDirectory ? [`--working-directory=${entry.workingDirectory}`] : [];
+        Quickshell.execDetached(["systemd-run", "--user", "--scope", "--quiet", "--collect", ...directory, "--", ...entry.command]);
     }
 }
