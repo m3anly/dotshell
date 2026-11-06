@@ -563,7 +563,6 @@ QtObject {
         StepperRow {
             shown: notificationsPage.shown
             order: 4
-            divider: false
             key: "notifications.criticalTimeout"
             title: "Critical popups"
             description: "Display time for critical notifications."
@@ -572,6 +571,28 @@ QtObject {
             step: 5
             unit: "s"
             zeroText: "Until dismissed"
+        }
+
+        SettingRow {
+            Layout.fillWidth: true
+            shown: notificationsPage.shown
+            order: 5
+            wide: true
+            divider: false
+            key: "notifications.expireAfter"
+            title: "Expire after"
+            description: "Seconds after which notifications from these apps leave the notification center. Matches the app name, desktop entry or summary, ignoring case."
+
+            MapEditor {
+                Layout.fillWidth: true
+                map: Config.notifications.expireAfter
+                numeric: true
+                suggestions: [...new Set(Notifications.list.map(notification => notification.appName).filter(Boolean))]
+                suggest: name => "60"
+                keyPlaceholder: "App or summary"
+                valuePlaceholder: "Seconds"
+                onEdited: map => Config.set("notifications.expireAfter", map)
+            }
         }
     }
 

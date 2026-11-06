@@ -12,10 +12,15 @@ Singleton {
     property var popups: []
     property var received: ({})
     property var unreadIds: []
+    property var seen: ({})
     readonly property int unread: list.filter(notification => unreadIds.includes(notification.id)).length
     property string screen: ""
     readonly property bool doNotDisturb: Store.notifications.doNotDisturb
     readonly property var shownPopups: popups.filter(notification => notification && list.includes(notification)).slice(0, Math.max(1, Config.notifications.maxPopups))
+    readonly property var expireAfter: Config.notifications.expireAfter
+
+    onShownPopupsChanged: Qt.callLater(sweep)
+    onExpireAfterChanged: Qt.callLater(sweep)
 
     onListChanged: {
         if (popups.some(notification => !notification || !list.includes(notification)))
@@ -30,6 +35,39 @@ Singleton {
         }
         if (unreadIds.some(id => !ids.has(String(id))))
             unreadIds = unreadIds.filter(id => ids.has(String(id)));
+        Qt.callLater(sweep);
+    }
+
+    function lifetime(notification: var): real {
+        const candidates = [notification?.appName, notification?.desktopEntry, notification?.summary].filter(Boolean).map(value => value.toLowerCase());
+        const match = Object.keys(expireAfter ?? {}).find(name => candidates.includes(name.trim().toLowerCase()));
+        return match === undefined ? 0 : Math.max(0, Number(expireAfter[match]) || 0);
+    }
+
+    function sweep(): void {
+        const now = Date.now();
+        const seen = {};
+        const due = [];
+        let next = Infinity;
+        for (const notification of list) {
+            seen[notification.id] = root.seen[notification.id] ?? now;
+            const seconds = lifetime(notification);
+            if (seconds === 0 || shownPopups.includes(notification))
+                continue;
+            const deadline = (received[notification.id] ?? seen[notification.id]) + seconds * 1000;
+            if (deadline <= now)
+                due.push(notification);
+            else
+                next = Math.min(next, deadline);
+        }
+        root.seen = seen;
+        if (next === Infinity)
+            sweeper.stop();
+        else {
+            sweeper.interval = Math.max(100, next - now);
+            sweeper.restart();
+        }
+        due.forEach(notification => notification.expire());
     }
 
     function toggleDoNotDisturb(): void {
@@ -104,6 +142,12 @@ Singleton {
 
     function markRead(): void {
         unreadIds = [];
+    }
+
+    Timer {
+        id: sweeper
+
+        onTriggered: root.sweep()
     }
 
     NotificationServer {

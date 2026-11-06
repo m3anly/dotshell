@@ -62,7 +62,8 @@ Singleton {
                 maxPopups: 4,
                 timeout: 6,
                 respectAppTimeout: true,
-                criticalTimeout: 0
+                criticalTimeout: 0,
+                expireAfter: {}
             },
             audio: {
                 step: 5
@@ -182,7 +183,8 @@ Singleton {
             maxPopups: value("notifications.maxPopups"),
             timeout: value("notifications.timeout"),
             respectAppTimeout: value("notifications.respectAppTimeout"),
-            criticalTimeout: value("notifications.criticalTimeout")
+            criticalTimeout: value("notifications.criticalTimeout"),
+            expireAfter: value("notifications.expireAfter")
         })
     readonly property var audio: ({
             step: value("audio.step")

@@ -160,9 +160,9 @@ PanelWindow {
                     const config = Config.notifications;
                     if (modelData?.urgency === NotificationUrgency.Critical)
                         return Math.max(0, config.criticalTimeout) * 1000;
-                    const seconds = modelData?.expireTimeout ?? 0;
-                    if (config.respectAppTimeout && seconds > 0)
-                        return Math.max(3000, seconds * 1000);
+                    const requested = modelData?.expireTimeout ?? 0;
+                    if (config.respectAppTimeout && requested > 0)
+                        return Math.max(3000, requested);
                     return Math.max(1, config.timeout) * 1000;
                 }
 

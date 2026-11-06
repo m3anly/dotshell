@@ -168,6 +168,11 @@ in
             timeout = nullable types.ints.positive "Seconds a popup stays when the app gives no timeout, or always when `respectAppTimeout` is off.";
             respectAppTimeout = nullable types.bool "Keep a popup as long as its app asks, at least 3 s.";
             criticalTimeout = nullable types.ints.unsigned "Seconds a critical popup stays; 0 keeps it until dismissed.";
+            expireAfter = nullable (types.attrsOf types.ints.positive) ''
+              App names, desktop entries or summaries mapped to seconds after which their notifications
+              leave the notification center, for example `{ "Claude Code" = 60; }`. Matching ignores case;
+              a notification still showing as a popup leaves when its popup does.
+            '';
           };
           audio.step = nullable types.ints.positive "Volume step in percent per wheel notch over the OSD and at the right edge of the bar. Keys pass their own step in the niri bind.";
           brightness.step = nullable types.ints.positive "Brightness step in percent per wheel notch over the OSD and at the left edge of the bar.";

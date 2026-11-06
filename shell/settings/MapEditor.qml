@@ -13,6 +13,7 @@ ColumnLayout {
     property var map: ({})
     property var suggestions: []
     property bool glyphs: false
+    property bool numeric: false
     property string keyPlaceholder: "Key"
     property string valuePlaceholder: "Value"
     property var suggest: key => ""
@@ -22,7 +23,13 @@ ColumnLayout {
     signal edited(var map)
 
     function validValue(value: string): bool {
+        if (numeric)
+            return /^[0-9]+$/.test(value) && Number(value) > 0;
         return value !== "" && (!glyphs || Glyphs.iconDots(value).length > 0);
+    }
+
+    function parsed(value: string): var {
+        return numeric ? Number(value) : value;
     }
 
     spacing: 8
@@ -82,11 +89,11 @@ ColumnLayout {
 
             TextField {
                 implicitWidth: 120
-                text: root.map[entry.modelData] ?? ""
+                text: String(root.map[entry.modelData] ?? "")
                 valid: root.validValue(text)
                 onCommitted: value => {
                     if (root.validValue(value.trim()))
-                        root.edited(Format.withEntry(root.map, entry.modelData, value.trim()));
+                        root.edited(Format.withEntry(root.map, entry.modelData, root.parsed(value.trim())));
                 }
             }
 
@@ -156,7 +163,7 @@ ColumnLayout {
             text: "Add"
             enabled: newKey.input.text.trim() !== "" && root.validValue(newValue.input.text.trim())
             onClicked: {
-                root.edited(Format.withEntry(root.map, newKey.input.text.trim(), newValue.input.text.trim()));
+                root.edited(Format.withEntry(root.map, newKey.input.text.trim(), root.parsed(newValue.input.text.trim())));
                 newKey.input.text = "";
                 newValue.input.text = "";
                 newKey.input.focus = false;
