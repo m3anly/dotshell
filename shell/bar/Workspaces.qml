@@ -121,11 +121,10 @@ Bay {
         }
     }
 
-    DisplayText {
+    Label {
         visible: Config.bar.show.workspaceCounter
         text: `${bay.activeIndex + 1}/${bay.workspaces.length}`
         color: Theme.fg2
-        font.pixelSize: Theme.labelSize
-        Layout.minimumWidth: font.pixelSize * 1.8
+        Layout.minimumWidth: pixelSize * 1.8
     }
 }
