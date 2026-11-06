@@ -109,6 +109,6 @@ Singleton {
 
     function launch(entry: var): void {
         const directory = entry.workingDirectory ? [`--working-directory=${entry.workingDirectory}`] : [];
-        Quickshell.execDetached(["systemd-run", "--user", "--scope", "--quiet", "--collect", ...directory, "--", ...entry.command]);
+        Quickshell.execDetached(["systemd-run", "--user", "--scope", "--quiet", "--collect", ...directory, "--", "env", "-u", "FONTCONFIG_FILE", ...entry.command]);
     }
 }
