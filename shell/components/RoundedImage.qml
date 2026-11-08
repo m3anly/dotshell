@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Shapes
+import Quickshell
 
 Item {
     id: root
@@ -11,6 +12,7 @@ Item {
     property real radius: 0
     readonly property alias status: picture.status
     readonly property Image image: picture
+    readonly property real pixelRatio: (QsWindow.window as QsWindow)?.devicePixelRatio ?? 1
 
     Image {
         id: picture
@@ -34,7 +36,7 @@ Item {
             strokeWidth: -1
             strokeColor: "transparent"
             fillItem: picture
-            fillTransform: PlanarTransform.fromAffineMatrix(picture.width / Math.max(1, picture.implicitWidth), 0, 0, picture.height / Math.max(1, picture.implicitHeight), picture.x, picture.y)
+            fillTransform: PlanarTransform.fromAffineMatrix(picture.width * root.pixelRatio / Math.max(1, picture.implicitWidth), 0, 0, picture.height * root.pixelRatio / Math.max(1, picture.implicitHeight), picture.x, picture.y)
 
             PathRectangle {
                 width: root.width
