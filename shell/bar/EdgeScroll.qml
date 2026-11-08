@@ -16,7 +16,7 @@ MouseArea {
             wheel.accepted = false;
             return;
         }
-        remainder += wheel.pixelDelta.y !== 0 ? -wheel.pixelDelta.y * 4 : wheel.angleDelta.y;
+        remainder += wheel.phase !== Qt.NoScrollPhase ? -wheel.pixelDelta.y * 4 : wheel.angleDelta.y;
         const steps = Math.trunc(remainder / 120);
         if (steps === 0)
             return;

@@ -33,7 +33,7 @@ MouseArea {
             return;
         const dx = wheel.angleDelta.x;
         const dy = wheel.angleDelta.y;
-        const touchpad = wheel.pixelDelta.x !== 0 || wheel.pixelDelta.y !== 0;
+        const touchpad = wheel.phase !== Qt.NoScrollPhase;
         if (Math.abs(dx) > Math.abs(dy)) {
             if (!touchpad)
                 return;

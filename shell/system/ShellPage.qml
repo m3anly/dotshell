@@ -279,7 +279,7 @@ TabPage {
                 anchors.fill: parent
                 acceptedButtons: Qt.NoButton
                 onWheel: wheel => {
-                    const touchpad = wheel.pixelDelta.x !== 0 || wheel.pixelDelta.y !== 0;
+                    const touchpad = wheel.phase !== Qt.NoScrollPhase;
                     if (touchpad) {
                         gesture.restart();
                         if (strip.swiped || Math.abs(wheel.angleDelta.x) <= Math.abs(wheel.angleDelta.y))

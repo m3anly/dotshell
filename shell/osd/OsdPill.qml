@@ -146,7 +146,7 @@ Rectangle {
     WheelHandler {
         acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
         onWheel: event => {
-            const delta = event.pixelDelta.y !== 0 ? event.pixelDelta.y * 4 : event.angleDelta.y;
+            const delta = event.phase !== Qt.NoScrollPhase ? event.pixelDelta.y * 4 : event.angleDelta.y;
             root.wheelRemainder += delta;
             const steps = Math.trunc(root.wheelRemainder / 120);
             if (steps === 0)
