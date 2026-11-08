@@ -90,7 +90,7 @@ PanelWindow {
 
     function clampY(y: real): real {
         const top = Theme.barAtBottom ? 8 : Theme.barHeight + 8;
-        const bottom = window.height - 420 - (Theme.barAtBottom ? Theme.barHeight : 0);
+        const bottom = window.height - wrap.height - 8 - (Theme.barAtBottom ? Theme.barHeight : 0);
         return Math.round(Math.max(top, Math.min(bottom, y)));
     }
 
