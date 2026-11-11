@@ -95,6 +95,39 @@ programs.dotshell.settings = {
 
 Options set here are locked in the settings window; the rest stay editable. Every option is documented in [`nix/home-manager.nix`](nix/home-manager.nix).
 
+## Plugins
+
+A plugin is a directory in `~/.config/dotshell/plugins/<name>/`, where the name is lowercase letters, digits and underscores. It can add to the shell, replace parts of it, or both:
+
+- `Plugin.qml`, with a `ShellPlugin` root, runs for as long as the shell does. It can hold processes, timers and `IpcHandler`s, and offers a `bar` component (a `Bay`, placed in `barSection` `left` or `right` while `barShown` is true and there is room), a `tile` (`QuickSettingsTile`, placed beside the Wi-Fi and Bluetooth tiles in quick settings while its `shown` is true, with an optional expandable `content` sub-panel, whose `open` property, if it declares one, is true while it is expanded; without `content`, a click anywhere on the tile toggles it) and a `panel` component (a `Panel`, anchored by `panelAnchor` `left`, `center` or `right`). A plugin's panel or tile sub-panel opens with `togglePanel(screenName)` or `dotshell ipc call panels plugin <name>`. A bar item that declares `property string screenName` receives its bar's output. The plugin's other files sit next to it as its own types, and `qs.components`, `qs.services`, `qs.theme` and the rest import as usual.
+- `overrides/` is laid over the shell's own files by path: `overrides/bar/Battery.qml` replaces `shell/bar/Battery.qml`. Overrides follow Dotshell's internals, so they can break when it updates.
+
+```qml
+import QtQuick
+import qs.bar
+import qs.components
+
+ShellPlugin {
+    id: plugin
+
+    defaults: ({ greeting: "hello" })
+    bar: Component {
+        Bay {
+            Label { text: plugin.value("greeting") }
+        }
+    }
+}
+```
+
+`defaults` declares the plugin's settings, read with `value(key)`. They come from the plugin's own `config.json` over its `settings.json` (written with `set(key, value)`) over `defaults`, key by key, like the shell's settings. Plugins are picked up when the shell starts. With Home Manager:
+
+```nix
+programs.dotshell.plugins.greeter = {
+  source = ./greeter;
+  settings.greeting = "hi";
+};
+```
+
 ## Good to know
 
 - Dotshell is the notification daemon, the polkit agent and the screen locker. Stop other notification daemons (mako, dunst, swaync), or Dotshell shows no popups. To keep your own polkit agent or locker, turn off `polkitAgent` or `lockOnLogind`.

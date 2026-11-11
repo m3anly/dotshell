@@ -2,7 +2,7 @@
 
 Dotshell is a Quickshell (QML) desktop shell for niri, packaged as a Nix flake with a Home Manager module and a NixOS module. Document only what is not obvious from the code.
 
-The phone layout lives in [fliq](https://github.com/m3anly/fliq), a compositor that runs Dotshell's `shell/` merged with its own and overrides files by path. Renaming or changing the public API of a service, component or settings section can break it.
+The phone layout lives in [fliq](https://github.com/m3anly/fliq), a compositor that runs Dotshell's `shell/` merged with its own and overrides files by path. Renaming or changing the public API of a service, component or settings section can break it, and the same holds for user plugins, which build on `ShellPlugin`, `QuickSettingsTile`, `Bay`, `Panel`, the shared components and services, and replace files by path.
 
 ## Layout
 
@@ -19,6 +19,7 @@ The phone layout lives in [fliq](https://github.com/m3anly/fliq), a compositor t
 | `nix/home-manager.nix` | `programs.dotshell` options, including every setting with its description |
 | `nix/nixos.nix` | `programs.dotshell.enable` on NixOS: the system services the shell talks to |
 | `flake.nix` | Packages (`dotshell`, `dev`, `lint`, `fonts`) and the runtime tools on `PATH` |
+| `nix/plugin-tree.sh` | Merges user plugins (`~/.config/dotshell/plugins/`) with `shell/` before the launcher starts Quickshell |
 | `tools/` | Development tooling that does not ship with the shell |
 
 ## Commands

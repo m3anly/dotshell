@@ -81,6 +81,29 @@ in
       };
     };
 
+    plugins = mkOption {
+      default = { };
+      description = ''
+        Plugins linked into `$XDG_CONFIG_HOME/dotshell/plugins/<name>`. The shell loads
+        plugins when it starts; the user service restarts when this set changes.
+      '';
+      type = types.attrsOf (
+        types.submodule {
+          options = {
+            source = mkOption {
+              type = types.path;
+              description = "Directory with the plugin's `Plugin.qml` and other files, and an optional `overrides/` tree laid over the shell's files by path.";
+            };
+            settings = mkOption {
+              type = json.type;
+              default = { };
+              description = "Written to the plugin's `config.json`. Keys set here win over the plugin's `settings.json`.";
+            };
+          };
+        }
+      );
+    };
+
     settings = mkOption {
       default = { };
       description = ''
@@ -240,25 +263,46 @@ in
   };
 
   config = lib.mkIf cfg.enable {
+    assertions = lib.mapAttrsToList (name: _: {
+      assertion = builtins.match "[a-z][a-z0-9_]*" name != null;
+      message = "programs.dotshell.plugins.${name}: plugin names are lowercase letters, digits and underscores, starting with a letter.";
+    }) cfg.plugins;
+
     home.packages = [ cfg.package ];
 
-    xdg.configFile."dotshell/config.json".source = json.generate "dotshell-config.json" (
-      withoutNulls cfg.settings
-    );
+    xdg.configFile = {
+      "dotshell/config.json".source = json.generate "dotshell-config.json" (withoutNulls cfg.settings);
 
-    xdg.configFile."niri/dotshell/rules.kdl" = lib.mkIf cfg.niri.rules {
-      source = ../niri/rules.kdl;
-    };
+      "niri/dotshell/rules.kdl" = lib.mkIf cfg.niri.rules {
+        source = ../niri/rules.kdl;
+      };
 
-    xdg.configFile."niri/dotshell/binds.kdl" = lib.mkIf cfg.niri.binds {
-      source = ../niri/binds.kdl;
-    };
+      "niri/dotshell/binds.kdl" = lib.mkIf cfg.niri.binds {
+        source = ../niri/binds.kdl;
+      };
+    }
+    // lib.concatMapAttrs (
+      name: plugin:
+      {
+        "dotshell/plugins/${name}" = {
+          inherit (plugin) source;
+          recursive = true;
+        };
+      }
+      // lib.optionalAttrs (plugin.settings != { }) {
+        "dotshell/plugins/${name}/config.json".source =
+          json.generate "dotshell-plugin-${name}-config.json" plugin.settings;
+      }
+    ) cfg.plugins;
 
     systemd.user.services.dotshell = lib.mkIf cfg.systemd.enable {
       Unit = {
         Description = "Dotshell desktop shell";
         PartOf = [ "graphical-session.target" ];
         After = [ "graphical-session.target" ];
+        X-Restart-Triggers = lib.mkIf (cfg.plugins != { }) (
+          lib.mapAttrsToList (name: plugin: "${name}=${plugin.source}") cfg.plugins
+        );
       };
       Service = {
         ExecStart = lib.getExe cfg.package;

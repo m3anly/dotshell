@@ -2,7 +2,7 @@ root="${1:-$PWD/shell}"
 work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
 
-cp -r "$root" "$work/qs"
+cp -rL "$root" "$work/qs"
 
 find "$work/qs" -type d | while read -r dir; do
   rel="${dir#"$work"/}"

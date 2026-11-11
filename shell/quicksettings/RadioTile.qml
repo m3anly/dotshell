@@ -8,6 +8,7 @@ Rectangle {
 
     property string glyph
     property bool on: false
+    property bool expandable: true
     property bool expanded: false
     property string title
     property string subtitle
@@ -72,7 +73,7 @@ Rectangle {
             restColor: "transparent"
             hoverColor: Theme.hover
             outline: "transparent"
-            onClicked: root.opened()
+            onClicked: root.expandable ? root.opened() : root.toggled()
 
             RowLayout {
                 anchors.fill: parent
@@ -103,6 +104,7 @@ Rectangle {
                 }
 
                 DotIcon {
+                    visible: root.expandable
                     name: "chev"
                     size: 12
                     color: root.expanded ? Theme.fg : Theme.fg2

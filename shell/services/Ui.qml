@@ -9,6 +9,7 @@ Singleton {
     property string panel: ""
     property string screen: ""
     property bool powerExpanded: false
+    property string quickSettingsSub: ""
     property bool launcherOpen: false
     property string launcherMode: "search"
     property bool cheatsheetOpen: false
@@ -21,6 +22,11 @@ Singleton {
     property string systemTab: "monitor"
     property int systemDirection: 1
     property var trayMenu: null
+
+    onPanelChanged: {
+        if (panel !== "quickSettings")
+            quickSettingsSub = "";
+    }
 
     function resolveScreen(screenName: string): string {
         return screenName || Niri.focusedWorkspace?.output || Quickshell.screens[0]?.name || "";
@@ -36,8 +42,25 @@ Singleton {
             panel = "";
             return;
         }
+        if (name === "quickSettings")
+            quickSettingsSub = "";
         screen = target;
         panel = name;
+    }
+
+    function toggleQuickSettings(sub: string, screenName: string): void {
+        const target = resolveScreen(screenName);
+        if (panel === "quickSettings" && screen === target && quickSettingsSub === sub) {
+            panel = "";
+            return;
+        }
+        trayMenu = null;
+        launcherOpen = false;
+        cheatsheetOpen = false;
+        powerExpanded = false;
+        quickSettingsSub = sub;
+        screen = target;
+        panel = "quickSettings";
     }
 
     function toggleDashboard(tab: string, screenName: string): void {
@@ -80,6 +103,7 @@ Singleton {
         trayMenu = null;
         launcherOpen = false;
         cheatsheetOpen = false;
+        quickSettingsSub = "";
         screen = resolveScreen("");
         panel = "quickSettings";
         powerExpanded = true;

@@ -1,3 +1,5 @@
+pragma ComponentBehavior: Bound
+
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
@@ -20,8 +22,65 @@ PanelWindow {
     exclusiveZone: Theme.barHeight
     color: Theme.glass(Theme.tintBar)
     WlrLayershell.namespace: "dotshell-bar"
+    readonly property real sideRoom: (content.width - center.width) / 2
+    readonly property var leftShown: fit([
+        {
+            item: workspaces,
+            wanted: true
+        },
+        {
+            item: windowTitle,
+            wanted: Config.bar.show.focusedWindow,
+            width: 80
+        }
+    ].concat(pluginBlocks(leftPlugins)), sideRoom - systemButton.implicitWidth)
+    readonly property var rightShown: fit([
+        {
+            item: quickSettingsBay,
+            wanted: Config.bar.show.quickSettings
+        },
+        {
+            item: notificationsBay,
+            wanted: Config.bar.show.notifications
+        },
+        {
+            item: batteryBay,
+            wanted: Config.bar.show.battery && Power.present
+        },
+        {
+            item: layoutBay,
+            wanted: Config.bar.show.layout && Niri.layoutNames.length > 1
+        },
+        {
+            item: trayBay,
+            wanted: Config.bar.show.tray && SystemTray.items.values.length > 0
+        }
+    ].concat(pluginBlocks(rightPlugins)), sideRoom)
     WlrLayershell.layer: WlrLayer.Top
     BackgroundEffect.blurRegion: Theme.blur ? blurRegion : null
+
+    function pluginBlocks(repeater: Repeater): var {
+        return Array.from({
+            length: repeater.count
+        }, (_, index) => {
+            const item = repeater.itemAt(index) as PluginItem;
+            return {
+                item,
+                wanted: item?.modelData.barShown ?? false
+            };
+        });
+    }
+
+    function fit(blocks: var, room: real): var {
+        let used = 0;
+        return blocks.map(block => {
+            const width = block.width ?? block.item?.implicitWidth ?? 0;
+            if (!block.wanted || used + width > room)
+                return false;
+            used += width;
+            return true;
+        });
+    }
 
     Region {
         id: blurRegion
@@ -49,17 +108,35 @@ PanelWindow {
             spacing: 0
 
             SystemButton {
+                id: systemButton
+
                 screenName: bar.screen?.name ?? ""
             }
 
             Workspaces {
+                id: workspaces
+
+                visible: bar.leftShown[0]
                 output: bar.screen?.name ?? ""
             }
 
             WindowTitle {
-                visible: Config.bar.show.focusedWindow
+                id: windowTitle
+
+                visible: bar.leftShown[1]
                 Layout.fillWidth: true
                 Layout.minimumWidth: 0
+            }
+
+            Repeater {
+                id: leftPlugins
+
+                model: Plugins.barItems("left")
+
+                PluginItem {
+                    visible: bar.leftShown[2 + index] ?? false
+                    screenName: bar.screen?.name ?? ""
+                }
             }
         }
 
@@ -81,7 +158,9 @@ PanelWindow {
             height: parent.height
 
             Bay {
-                visible: Config.bar.show.tray && SystemTray.items.values.length > 0
+                id: trayBay
+
+                visible: bar.rightShown[4]
                 spacing: 14
 
                 Repeater {
@@ -92,21 +171,40 @@ PanelWindow {
             }
 
             KeyboardLayout {
-                visible: Config.bar.show.layout && Niri.layoutNames.length > 1
+                id: layoutBay
+
+                visible: bar.rightShown[3]
+            }
+
+            Repeater {
+                id: rightPlugins
+
+                model: Plugins.barItems("right")
+
+                PluginItem {
+                    visible: bar.rightShown[5 + index] ?? false
+                    screenName: bar.screen?.name ?? ""
+                }
             }
 
             Battery {
-                visible: Config.bar.show.battery && Power.present
+                id: batteryBay
+
+                visible: bar.rightShown[2]
                 screenName: bar.screen?.name ?? ""
             }
 
             NotificationButton {
-                visible: Config.bar.show.notifications
+                id: notificationsBay
+
+                visible: bar.rightShown[1]
                 screenName: bar.screen?.name ?? ""
             }
 
             QuickSettingsButton {
-                visible: Config.bar.show.quickSettings
+                id: quickSettingsBay
+
+                visible: bar.rightShown[0]
                 screenName: bar.screen?.name ?? ""
             }
         }

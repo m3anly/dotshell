@@ -1,3 +1,5 @@
+pragma ComponentBehavior: Bound
+
 import QtQuick
 import QtQuick.Layouts
 import qs.components
@@ -7,17 +9,17 @@ import qs.theme
 Panel {
     id: root
 
-    property string sub: ""
+    readonly property string sub: open ? Ui.quickSettingsSub : ""
     property string audioPicker: ""
     property bool compact: false
     property real expansion: compact ? 0 : 1
 
     fromRight: true
     onOpenChanged: {
-        if (open)
+        if (open) {
             Brightness.refresh();
+        }
         if (!open) {
-            sub = "";
             audioPicker = "";
             Radios.stopScanning();
         }
@@ -61,7 +63,7 @@ Panel {
     }
 
     function toggleSub(kind: string): void {
-        sub = sub === kind ? "" : kind;
+        Ui.quickSettingsSub = Ui.quickSettingsSub === kind ? "" : kind;
     }
 
     Binding {
@@ -93,9 +95,11 @@ Panel {
             anchors.right: parent.right
             spacing: 0
 
-            RowLayout {
+            GridLayout {
                 Layout.fillWidth: true
-                spacing: 8
+                columns: 2
+                columnSpacing: 8
+                rowSpacing: 8
 
                 RadioTile {
                     Layout.fillWidth: true
@@ -132,6 +136,29 @@ Panel {
                     }
                     onToggled: Radios.toggleBluetooth()
                     onOpened: root.toggleSub("bluetooth")
+                }
+
+                Repeater {
+                    model: Plugins.tiles
+
+                    RadioTile {
+                        id: pluginTile
+
+                        required property ShellPlugin modelData
+                        required property int index
+
+                        Layout.fillWidth: true
+                        Layout.preferredWidth: 1
+                        Layout.columnSpan: index === Plugins.tiles.length - 1 && Plugins.tiles.length % 2 === 1 ? 2 : 1
+                        glyph: modelData.tile.glyph
+                        on: modelData.tile.on
+                        expandable: modelData.tile.content !== null
+                        expanded: root.sub === modelData.panelName
+                        title: modelData.tile.title
+                        subtitle: modelData.tile.subtitle
+                        onToggled: modelData.tile.toggled()
+                        onOpened: root.toggleSub(pluginTile.modelData.panelName)
+                    }
                 }
             }
 

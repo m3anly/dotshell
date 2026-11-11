@@ -58,8 +58,26 @@
             pkgs.writeShellApplication {
               inherit name runtimeInputs;
               text = ''
+                base=${shellPath}
+                tree="''${XDG_RUNTIME_DIR:-/tmp}/dotshell/$(printf '%s' "$base" | md5sum | cut -c1-12)"
+                starts=true
+                for arg in "$@"; do
+                  case "$arg" in
+                    -*) continue ;;
+                    ipc | list | kill | log | msg) starts=false ;;
+                  esac
+                  break
+                done
+                if $starts; then
+                  DOTSHELL_PLUGINS="$(bash ${./nix/plugin-tree.sh} "$base" "''${XDG_CONFIG_HOME:-$HOME/.config}/dotshell/plugins" "$tree")"
+                  export DOTSHELL_PLUGINS
+                fi
+                config="$base"
+                if [ -e "$tree/shell.qml" ]; then
+                  config="$tree"
+                fi
                 export FONTCONFIG_FILE=${fontsConf}
-                export QS_CONFIG_PATH=${shellPath}
+                export QS_CONFIG_PATH="$config"
                 export DOTSHELL_VOLUME_SOUND=${pkgs.sound-theme-freedesktop}/share/sounds/freedesktop/stereo/audio-volume-change.oga
                 exec quickshell "$@"
               '';

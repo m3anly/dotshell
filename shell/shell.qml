@@ -83,5 +83,6 @@ ShellRoot {
     Component.onCompleted: {
         Clipboard.refresh();
         Badges.watch();
+        Plugins.start();
     }
 }

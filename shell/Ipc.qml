@@ -197,6 +197,12 @@ Scope {
             Ui.togglePanel("battery", "");
         }
 
+        function plugin(name: string): void {
+            const plugin = Plugins.find(name);
+            if (plugin)
+                plugin.togglePanel("");
+        }
+
         function close(): void {
             Ui.closeAll();
         }

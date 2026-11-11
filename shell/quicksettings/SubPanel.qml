@@ -15,6 +15,10 @@ Item {
     readonly property bool open: kind !== ""
     property real openness: 0
     readonly property bool isWifi: shownKind === "wifi"
+    readonly property bool isBluetooth: shownKind === "bluetooth"
+    readonly property bool isPlugin: shownKind.startsWith("plugin.")
+    readonly property ShellPlugin plugin: isPlugin ? Plugins.loaded.find(plugin => plugin.panelName === shownKind) ?? null : null
+    property bool regrouping: false
     readonly property bool scanning: isWifi ? Radios.wifiScanning : Radios.discovering
     readonly property string note: {
         if (isWifi) {
@@ -33,16 +37,19 @@ Item {
     property real rowResizedAt: 0
     property var passwordNetwork: null
 
-    readonly property real cardHeight: column.implicitHeight + 20
+    property real bodyHeight: column.implicitHeight
+    readonly property real cardHeight: bodyHeight + 20
 
     implicitHeight: Math.round((cardHeight + 12) * openness)
     visible: openness > 0
 
     onKindChanged: {
-        if (kind !== "")
-            shownKind = kind;
-        else
+        if (kind === "") {
             passwordNetwork = null;
+            return;
+        }
+        regrouping = kind.startsWith("plugin.") ? kind !== shownKind : isPlugin;
+        shownKind = kind;
     }
 
     states: State {
@@ -73,6 +80,17 @@ Item {
             }
         }
     ]
+
+    Behavior on bodyHeight {
+        enabled: !Motion.reduced && root.openness === 1 && (root.isPlugin || root.regrouping)
+
+        SpatialStandard {
+            onRunningChanged: {
+                if (!running)
+                    root.regrouping = false;
+            }
+        }
+    }
 
     Behavior on listHeight {
         enabled: !Motion.reduced && root.openness === 1
@@ -193,6 +211,7 @@ Item {
 
             RowLayout {
                 Layout.fillWidth: true
+                visible: !root.isPlugin
                 Layout.leftMargin: 4
                 Layout.rightMargin: 4
                 Layout.topMargin: 2
@@ -249,6 +268,7 @@ Item {
             Item {
                 Layout.fillWidth: true
                 Layout.preferredHeight: root.listHeight
+                visible: !root.isPlugin
                 clip: true
 
                 Label {
@@ -291,9 +311,9 @@ Item {
                 RowList {
                     id: deviceList
 
-                    visible: !root.isWifi && root.note === ""
+                    visible: root.isBluetooth && root.note === ""
                     model: ScriptModel {
-                        values: !root.isWifi && Radios.bluetoothEnabled ? Radios.bluetoothDevices : []
+                        values: root.isBluetooth && Radios.bluetoothEnabled ? Radios.bluetoothDevices : []
                     }
                     delegate: RowSlot {
                         id: deviceSlot
@@ -304,6 +324,17 @@ Item {
                             modelData: deviceSlot.modelData
                         }
                     }
+                }
+            }
+
+            Loader {
+                Layout.fillWidth: true
+                active: root.isPlugin
+                visible: active
+                sourceComponent: root.plugin?.tile?.content ?? null
+                onLoaded: {
+                    if ("open" in item)
+                        item.open = Qt.binding(() => root.kind === root.shownKind);
                 }
             }
         }

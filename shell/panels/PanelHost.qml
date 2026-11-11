@@ -27,7 +27,11 @@ PanelWindow {
     }
     exclusionMode: ExclusionMode.Normal
     color: "transparent"
-    visible: active || [systemPanel, quickSettings, batteryPanel, notificationCenter, dashboard].some(slot => slot.panel?.visible ?? false)
+    readonly property var slots: [systemPanel, quickSettings, batteryPanel, notificationCenter, dashboard].concat(Array.from({
+            length: pluginSlots.count
+        }, (_, index) => pluginSlots.itemAt(index)))
+
+    visible: active || slots.some(slot => slot?.panel?.visible ?? false)
     mask: active ? null : passThrough
     WlrLayershell.namespace: "dotshell-panels"
     WlrLayershell.layer: WlrLayer.Top
@@ -96,6 +100,10 @@ PanelWindow {
 
         PanelRegion {
             slot: dashboard
+        }
+
+        Region {
+            regions: host.slots.map(slot => slot?.region).filter(Boolean)
         }
     }
 
@@ -171,6 +179,25 @@ PanelWindow {
             anchors.horizontalCenter: parent.horizontalCenter
             sourceComponent: Component {
                 Dashboard {}
+            }
+        }
+
+        Repeater {
+            id: pluginSlots
+
+            model: Plugins.panels
+
+            PanelSlot {
+                id: pluginSlot
+
+                required property ShellPlugin modelData
+                readonly property PanelRegion region: PanelRegion {
+                    slot: pluginSlot
+                }
+
+                name: modelData.panelName
+                sourceComponent: modelData.panel
+                x: modelData.panelAnchor === "left" ? 6 : modelData.panelAnchor === "center" ? (parent.width - width) / 2 : parent.width - width - 6
             }
         }
     }

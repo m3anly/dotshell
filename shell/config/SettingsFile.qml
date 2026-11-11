@@ -12,6 +12,7 @@ Scope {
     property var pinned: ({})
     property var user: ({})
     property bool pendingSave: false
+    readonly property bool ready: pinnedFile.settled && userFile.settled
 
     function lookup(source: var, key: string): var {
         let node = source;
@@ -98,6 +99,7 @@ Scope {
         id: pinnedFile
 
         property bool missing: false
+        property bool settled: false
 
         path: root.path
         watchChanges: true
@@ -106,8 +108,10 @@ Scope {
         onLoaded: {
             missing = false;
             root.pinned = root.parse(text()) ?? root.pinned;
+            settled = true;
         }
         onLoadFailed: error => {
+            settled = true;
             if (error !== FileViewError.FileNotFound)
                 return;
             missing = true;
@@ -131,6 +135,7 @@ Scope {
         id: userFile
 
         property bool missing: false
+        property bool settled: false
 
         path: root.userPath
         watchChanges: true
@@ -140,8 +145,10 @@ Scope {
         onLoaded: {
             missing = false;
             root.user = root.parse(text()) ?? root.user;
+            settled = true;
         }
         onLoadFailed: error => {
+            settled = true;
             if (error !== FileViewError.FileNotFound)
                 return;
             missing = true;
