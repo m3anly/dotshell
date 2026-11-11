@@ -159,7 +159,7 @@ Panel {
         Layout.preferredHeight: implicitHeight * root.expansion
         Layout.topMargin: -12 * (1 - root.expansion)
         node: Audio.sink
-        glyph: "vol"
+        glyph: Audio.glyph(Audio.sink)
         heading: "Out"
         expanded: root.audioPicker === "out"
         onPickerToggled: root.audioPicker = root.audioPicker === "out" ? "" : "out"

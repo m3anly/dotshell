@@ -39,7 +39,7 @@ Bay {
     }
 
     StatusIcon {
-        name: "vol"
+        name: Audio.glyph(Audio.sink)
         color: bay.foreground
         dim: Audio.sinkSilent
     }

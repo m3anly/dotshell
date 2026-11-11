@@ -265,7 +265,7 @@ TabPage {
             Layout.fillWidth: true
             shown: true
             node: Audio.sink
-            glyph: "vol"
+            glyph: Audio.glyph(Audio.sink)
             heading: "Out"
             expanded: root.pickerOpen
             onPickerToggled: root.pickerOpen = !root.pickerOpen

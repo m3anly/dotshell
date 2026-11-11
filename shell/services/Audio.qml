@@ -41,12 +41,17 @@ Singleton {
     }
 
     function glyph(node: PwNode): string {
-        const formFactor = (node?.properties ?? {})["device.form-factor"] ?? "";
+        const props = node?.properties ?? {};
+        const formFactor = props["device.form-factor"] ?? "";
         if (formFactor === "headphone" || formFactor === "headset")
             return "phones";
-        if (bus(node) === "Bluetooth")
-            return node.isSink ? "buds" : "mic";
-        return node?.isSink ? "vol" : "mic";
+        if (node && !node.isSink)
+            return "mic";
+        if (bus(node) !== "Bluetooth")
+            return "vol";
+        const address = String(props["api.bluez5.address"] ?? "").toUpperCase();
+        const device = Radios.bluetoothDevices.find(device => String(device.address ?? "").toUpperCase() === address);
+        return Radios.deviceGlyph(device?.icon ?? "audio");
     }
 
     function setDefault(node: PwNode): void {

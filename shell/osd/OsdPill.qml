@@ -33,7 +33,7 @@ Rectangle {
             };
         default:
             return {
-                glyph: "vol",
+                glyph: Audio.glyph(Audio.sink),
                 label: "Vol",
                 value: Audio.percentOf(Audio.sink),
                 muted: Audio.sink?.audio?.muted ?? false
