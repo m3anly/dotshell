@@ -2,7 +2,6 @@ import QtQuick
 import QtQuick.Effects
 import Quickshell
 import Quickshell.Wayland
-import qs.components
 import qs.config
 import qs.services
 import qs.theme

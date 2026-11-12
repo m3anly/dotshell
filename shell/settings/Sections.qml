@@ -6,7 +6,6 @@ import Quickshell.Services.SystemTray
 import qs.components
 import qs.config
 import qs.services
-import qs.theme
 import "SettingsFormat.js" as Format
 
 QtObject {
