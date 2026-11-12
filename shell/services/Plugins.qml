@@ -11,6 +11,10 @@ Singleton {
     property var loaded: []
     readonly property var panels: loaded.filter(plugin => plugin.panel !== null)
     readonly property var tiles: loaded.filter(plugin => plugin.tile?.shown ?? false)
+    readonly property point barShift: loaded.reduce((sum, plugin) => Qt.point(sum.x + plugin.barShift.x, sum.y + plugin.barShift.y), Qt.point(0, 0))
+    readonly property real barOpacity: loaded.reduce((product, plugin) => product * plugin.barOpacity, 1)
+    readonly property real barLineOpacity: loaded.reduce((product, plugin) => product * plugin.barLineOpacity, 1)
+    readonly property var hiddenBarBlocks: loaded.reduce((blocks, plugin) => [...blocks, ...plugin.hiddenBarBlocks], [])
     property bool started: false
 
     onTilesChanged: {

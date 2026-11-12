@@ -30,34 +30,38 @@ PanelWindow {
         },
         {
             item: windowTitle,
-            wanted: Config.bar.show.focusedWindow,
+            wanted: bar.shows("focusedWindow"),
             width: 80
         }
     ].concat(pluginBlocks(leftPlugins)), sideRoom - systemButton.implicitWidth)
     readonly property var rightShown: fit([
         {
             item: quickSettingsBay,
-            wanted: Config.bar.show.quickSettings
+            wanted: bar.shows("quickSettings")
         },
         {
             item: notificationsBay,
-            wanted: Config.bar.show.notifications
+            wanted: bar.shows("notifications")
         },
         {
             item: batteryBay,
-            wanted: Config.bar.show.battery && Power.present
+            wanted: bar.shows("battery") && Power.present
         },
         {
             item: layoutBay,
-            wanted: Config.bar.show.layout && Niri.layoutNames.length > 1
+            wanted: bar.shows("layout") && Niri.layoutNames.length > 1
         },
         {
             item: trayBay,
-            wanted: Config.bar.show.tray && SystemTray.items.values.length > 0
+            wanted: bar.shows("tray") && SystemTray.items.values.length > 0
         }
     ].concat(pluginBlocks(rightPlugins)), sideRoom)
     WlrLayershell.layer: WlrLayer.Top
     BackgroundEffect.blurRegion: Theme.blur ? blurRegion : null
+
+    function shows(key: string): bool {
+        return Config.bar.show[key] && !Plugins.hiddenBarBlocks.includes(key);
+    }
 
     function pluginBlocks(repeater: Repeater): var {
         return Array.from({
@@ -99,113 +103,122 @@ PanelWindow {
             output: bar.screen?.name ?? ""
         }
 
-        RowLayout {
-            id: left
-
-            anchors.left: parent.left
-            width: (parent.width - center.width) / 2
-            height: parent.height
-            spacing: 0
-
-            SystemButton {
-                id: systemButton
-
-                screenName: bar.screen?.name ?? ""
+        Item {
+            anchors.fill: parent
+            opacity: Plugins.barOpacity
+            transform: Translate {
+                x: Plugins.barShift.x
+                y: Plugins.barShift.y
             }
 
-            Workspaces {
-                id: workspaces
+            RowLayout {
+                id: left
 
-                visible: bar.leftShown[0]
-                output: bar.screen?.name ?? ""
-            }
+                anchors.left: parent.left
+                width: (parent.width - center.width) / 2
+                height: parent.height
+                spacing: 0
 
-            WindowTitle {
-                id: windowTitle
+                SystemButton {
+                    id: systemButton
 
-                visible: bar.leftShown[1]
-                Layout.fillWidth: true
-                Layout.minimumWidth: 0
-            }
-
-            Repeater {
-                id: leftPlugins
-
-                model: Plugins.barItems("left")
-
-                PluginItem {
-                    visible: bar.leftShown[2 + index] ?? false
                     screenName: bar.screen?.name ?? ""
                 }
-            }
-        }
 
-        Row {
-            id: center
+                Workspaces {
+                    id: workspaces
 
-            anchors.horizontalCenter: parent.horizontalCenter
-            height: parent.height
+                    visible: bar.leftShown[0]
+                    output: bar.screen?.name ?? ""
+                }
 
-            DashboardButton {
-                screenName: bar.screen?.name ?? ""
-            }
-        }
+                WindowTitle {
+                    id: windowTitle
 
-        Row {
-            id: right
-
-            anchors.right: parent.right
-            height: parent.height
-
-            Bay {
-                id: trayBay
-
-                visible: bar.rightShown[4]
-                spacing: 14
+                    visible: bar.leftShown[1]
+                    Layout.fillWidth: true
+                    Layout.minimumWidth: 0
+                }
 
                 Repeater {
-                    model: SystemTray.items
+                    id: leftPlugins
 
-                    TrayButton {}
+                    model: Plugins.barItems("left")
+
+                    PluginItem {
+                        visible: bar.leftShown[2 + index] ?? false
+                        screenName: bar.screen?.name ?? ""
+                    }
                 }
             }
 
-            KeyboardLayout {
-                id: layoutBay
+            Row {
+                id: center
 
-                visible: bar.rightShown[3]
-            }
+                anchors.horizontalCenter: parent.horizontalCenter
+                height: parent.height
 
-            Repeater {
-                id: rightPlugins
-
-                model: Plugins.barItems("right")
-
-                PluginItem {
-                    visible: bar.rightShown[5 + index] ?? false
+                DashboardButton {
                     screenName: bar.screen?.name ?? ""
                 }
             }
 
-            Battery {
-                id: batteryBay
+            Row {
+                id: right
 
-                visible: bar.rightShown[2]
-                screenName: bar.screen?.name ?? ""
-            }
+                anchors.right: parent.right
+                height: parent.height
 
-            NotificationButton {
-                id: notificationsBay
+                Bay {
+                    id: trayBay
 
-                visible: bar.rightShown[1]
-                screenName: bar.screen?.name ?? ""
-            }
+                    visible: bar.rightShown[4]
+                    spacing: 14
 
-            QuickSettingsButton {
-                id: quickSettingsBay
+                    Repeater {
+                        model: SystemTray.items
 
-                visible: bar.rightShown[0]
-                screenName: bar.screen?.name ?? ""
+                        TrayButton {}
+                    }
+                }
+
+                KeyboardLayout {
+                    id: layoutBay
+
+                    visible: bar.rightShown[3]
+                }
+
+                Repeater {
+                    id: rightPlugins
+
+                    model: Plugins.barItems("right")
+
+                    PluginItem {
+                        visible: bar.rightShown[5 + index] ?? false
+                        screenName: bar.screen?.name ?? ""
+                    }
+                }
+
+                Battery {
+                    id: batteryBay
+
+                    visible: bar.rightShown[2]
+                    screenName: bar.screen?.name ?? ""
+                }
+
+                NotificationButton {
+                    id: notificationsBay
+
+                    visible: bar.rightShown[1]
+                    screenName: bar.screen?.name ?? ""
+                }
+
+                QuickSettingsButton {
+                    id: quickSettingsBay
+
+                    visible: bar.rightShown[0]
+                    screenName: bar.screen?.name ?? ""
+                }
             }
         }
 
@@ -238,6 +251,7 @@ PanelWindow {
             anchors.bottom: Theme.barAtBottom ? undefined : parent.bottom
             height: 1
             color: Theme.line
+            opacity: Plugins.barLineOpacity
         }
     }
 }

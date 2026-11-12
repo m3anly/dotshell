@@ -122,7 +122,7 @@ Bay {
     }
 
     Label {
-        visible: Config.bar.show.workspaceCounter
+        visible: Config.bar.show.workspaceCounter && !Plugins.hiddenBarBlocks.includes("workspaceCounter")
         text: `${bay.activeIndex + 1}/${bay.workspaces.length}`
         color: Theme.fg2
         Layout.minimumWidth: pixelSize * 1.8

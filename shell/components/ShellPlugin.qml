@@ -11,6 +11,10 @@ Scope {
     property Component bar: null
     property string barSection: "right"
     property bool barShown: true
+    property point barShift: Qt.point(0, 0)
+    property real barOpacity: 1
+    property real barLineOpacity: 1
+    property var hiddenBarBlocks: []
     property Component panel: null
     property string panelAnchor: "right"
     property QuickSettingsTile tile: null
